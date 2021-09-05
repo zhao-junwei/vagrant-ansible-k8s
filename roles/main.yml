@@ -1,0 +1,20 @@
+- hosts: all
+  become: yes
+  become_user: root
+  roles:
+  - common
+
+- hosts: master
+  become: yes
+  become_user: root
+  roles:
+  - master
+  - network
+  vars:
+    cni_name: calico
+
+- hosts: worker
+  become: yes
+  become_user: root
+  roles:
+  - worker

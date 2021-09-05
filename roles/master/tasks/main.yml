@@ -1,0 +1,43 @@
+- name: install openshift pip module for deploying k8s objects in playbook
+  pip:
+    name: openshift
+  tags:
+  - master
+ 
+- name: bootstrap kube master by kubeadm
+  shell: kubeadm init --apiserver-advertise-address=172.1.1.11 --pod-network-cidr=10.10.0.0/16
+  tags:
+  - master
+
+- name: generate kubectl config
+  shell: |
+    mkdir -p $HOME/.kube
+    cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    chown $(id -u):$(id -g) $HOME/.kube/config
+  tags:
+  - kubectl
+
+- name: get kubeadm token
+  shell: kubeadm token list -o jsonpath="{.token}"
+  register: kubetoken
+  tags:
+  - worker
+
+- name: get kubeadm ca
+  shell: openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^ .* //' | cut -d " " -f 2
+  register: kubeca
+  tags:
+  - worker
+
+- name: create join command for workers
+  set_fact:
+    kubeadm_join_cmd: kubeadm join 172.1.1.11:6443 --token {{ kubetoken.stdout }} --discovery-token-ca-cert-hash sha256:{{ kubeca.stdout }}
+    cacheable: true
+  tags:
+  - worker
+
+- name: debug output
+  debug:
+    msg: "command: {{ kubeadm_join_cmd }}"
+  tags:
+  - worker

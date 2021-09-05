@@ -1,0 +1,94 @@
+- name: generate hosts file for the cluster
+  copy:
+    content: |
+      172.1.1.11 kc1.example.com kc1
+      172.1.1.12 kc2.example.com kc2
+      172.1.1.13 kc3.example.com kc3
+    dest: /etc/hosts
+
+- name: install some dependencies
+  yum:
+    name: yum-utils, device-mapper-persistent-data, lvm2, python3
+    state: present
+
+- name: add yum repo for docker via qinghua
+  yum_repository:
+    name: docker-yum-repo
+    baseurl: https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/centos/8/x86_64/stable/
+    description: "yum repository for docker via qinghua"
+    gpgcheck: no
+  tags:
+    - docker
+
+- name: disable SELinux for now
+  ansible.posix.selinux:
+    state: disabled
+
+- name: disable SELinux for ever
+  shell: |
+    sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+
+- name: stop and disable firewalld service
+  systemd:
+    name: firewalld
+    state: stopped
+    enabled: false
+
+- name: disable swap
+  shell: |
+    swapoff -a
+    sed -ri 's/.*swap.*/#&/' /etc/fstab
+
+- name: install docker-ce
+  yum:
+    name: docker-ce
+    state: present
+    skip_broken: true
+  tags:
+  - docker
+
+- name: create docker config directory 
+  file:
+    path: /etc/docker
+    state: directory
+  tags:
+  - docker
+
+- name: configure docker with aliyun registry mirror 
+  copy:
+    src: daemon.json
+    dest: /etc/docker/daemon.json
+  tags:
+  - docker
+
+- name: start docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: true
+  tags:
+  - docker
+
+- name: add yum repo for kubernetes via qinghua
+  yum_repository:
+    name: kubernetes-yum-repo
+    baseurl: https://mirrors.tuna.tsinghua.edu.cn/kubernetes/yum/repos/kubernetes-el7-x86_64/
+    description: "yum repository for kubernetes via qinghua"
+    gpgcheck: no
+  tags:
+  - k8s
+
+- name: install kubernetes
+  yum:
+    name: kubelet, kubeadm, kubectl
+    state: present
+  tags:
+  - k8s
+
+- name: start kubelet service
+  systemd:
+    name: kubelet
+    state: started
+    enabled: true
+  tags:
+  - k8s

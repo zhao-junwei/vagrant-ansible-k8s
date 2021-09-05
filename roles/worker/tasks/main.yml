@@ -1,0 +1,16 @@
+- name: retrieve kubeadm join command
+  set_fact: kubeadm_join_cmd={{ hostvars[groups['master'][0]]['kubeadm_join_cmd'] }}
+  tags:
+  - worker
+
+- name: debug output
+  debug:
+    msg: "command: {{ kubeadm_join_cmd }}"
+  tags:
+  - worker
+
+- name: bootstrap kube workers by kubeadm
+  shell: "{{ kubeadm_join_cmd }}"
+  when: kubeadm_join_cmd is defined
+  tags:
+  - worker

@@ -1,0 +1,35 @@
+- name: download calico operator
+  get_url:
+    url: https://docs.projectcalico.org/manifests/tigera-operator.yaml
+    dest: ~/tigera-operator.yaml
+    mode: '0664'
+  tags:
+  - network
+  
+- name: deploy calico operator
+  kubernetes.core.k8s:
+    state: present
+    src: ~/tigera-operator.yaml
+  tags:
+  - network
+
+- name: download calico custom resource definition
+  get_url:
+    url: https://docs.projectcalico.org/manifests/custom-resources.yaml
+    dest: ~/calico-cr.yaml
+    mode: '0664'
+  tags:
+  - network
+
+- name: modify calico custom resource definition with the right IP addresses
+  shell: |
+    sed -i 's/192.168.0.0/10.10.0.0/g' ~/calico-cr.yaml
+  tags:
+  - network
+
+- name: deploy calico daemons
+  kubernetes.core.k8s:
+    state: present
+    src: ~/calico-cr.yaml
+  tags:
+  - network

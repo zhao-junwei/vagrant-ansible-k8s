@@ -1,0 +1,3 @@
+- name: deploy {{cni_name}} as the cni impl
+  include: "{{cni_name}}.yml"
+  when: cni_name is defined
